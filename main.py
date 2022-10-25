@@ -8,14 +8,16 @@ from mobiflight_variable_requests import MobiFlightVariableRequests
 
 
 kts = 5
+ktsmin = 5
+ktsmax = 35
 active = False
 deactivate = False
 braketrigger = 30
 alwaysontop = True
 transparency = 0.8
 refreshrate = 0.100
-datarefresh= time.time()
 
+datarefresh= time.time()
 sm = SimConnectMobiFlight()
 vr = MobiFlightVariableRequests(sm)
 vr.clear_sim_variables()
@@ -89,20 +91,20 @@ class App:
         global kts
         global gslimit_label
         kts += 5
-        if kts > 30:
-            kts = 30
+        if kts > ktsmax:
+            kts = ktsmax
         gslimit_label["text"] = str(kts)+" KTS"
-        print(kts)
+        print(kts, "KTS")
 
 
     def deckts_button_command(self):
         global kts
         global gslimit_label
         kts -= 5
-        if kts < 5:
-            kts = 5
+        if kts < ktsmin:
+            kts = ktsmin
         gslimit_label["text"] = str(kts)+" KTS"
-        print(kts)
+        print(kts, "KTS")
 
 
     def activate_button_command(self):
