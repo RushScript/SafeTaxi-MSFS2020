@@ -14,13 +14,15 @@ active = False
 deactivate = False
 braketrigger = 30
 alwaysontop = True
-transparency = 0.8
+transparency = 0.9
 refreshrate = 0.100
+
 
 datarefresh= time.time()
 sm = SimConnectMobiFlight()
 vr = MobiFlightVariableRequests(sm)
 vr.clear_sim_variables()
+
 
 class App:
     def __init__(self, root):
@@ -36,6 +38,7 @@ class App:
         alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
         root.geometry(alignstr)
         root.resizable(width=False, height=False)
+        root.iconbitmap("app.ico")
         # Hide the root window drag bar and close button
         root.overrideredirect(False)
         # Make the root window always on top
@@ -49,7 +52,7 @@ class App:
         gslimit_label["anchor"] = "center"
         ft = tkFont.Font(family='Arial',size=26)
         gslimit_label["font"] = ft
-        gslimit_label["fg"] = "#5fb878"
+        gslimit_label["fg"] = "#f2f2f2"
         gslimit_label["bg"] = "grey"
         gslimit_label["justify"] = "center"
         gslimit_label["text"] = str(kts)+" KTS"
@@ -94,7 +97,7 @@ class App:
         if kts > ktsmax:
             kts = ktsmax
         gslimit_label["text"] = str(kts)+" KTS"
-        print(kts, "KTS")
+        #print(kts, "KTS")
 
 
     def deckts_button_command(self):
@@ -104,12 +107,13 @@ class App:
         if kts < ktsmin:
             kts = ktsmin
         gslimit_label["text"] = str(kts)+" KTS"
-        print(kts, "KTS")
+        #print(kts, "KTS")
 
 
     def activate_button_command(self):
         global active
         global activate_button
+        global gslimit_label
         global deactivate
         if active == False:
             active = True
@@ -121,19 +125,21 @@ class App:
             active = False
             deactivate = True
             vr.set("0 (>K:THROTTLE_SET)")
-            print("Idle")
+            #print("Idle")
             vr.set("-16383 (>K:AXIS_LEFT_BRAKE_SET)")
             vr.set("-16383 (>K:AXIS_RIGHT_BRAKE_SET)")
-            print("Release Brake")
+            #print("Release Brake")
             vr.clear_sim_variables()
             activate_button["bg"] = "#ed5555"
-        print(active)
+            gslimit_label["fg"] = "#f2f2f2"
+        #print(active)
 
 
 def limit():
     global datarefresh
     global active
     global activate_button
+    global gslimit_label
     global deactivate
     if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1:
         while deactivate == False:
@@ -145,46 +151,53 @@ def limit():
                     if brake != 0:
                         vr.set("-16383 (>K:AXIS_LEFT_BRAKE_SET)")
                         vr.set("-16383 (>K:AXIS_RIGHT_BRAKE_SET)")
-                        print("Release Brake")
+                        #print("Release Brake")
                     vr.set("5000 (>K:THROTTLE_SET)")
-                    print("Force Thrust")
+                    gslimit_label["fg"] = "#5fb878"
+                    #print("Force Thrust")
                 if  kts / 2 <= gs <= kts - 2 and throttle != 1:
                     if brake != 0:
                         vr.set("-16383 (>K:AXIS_LEFT_BRAKE_SET)")
                         vr.set("-16383 (>K:AXIS_RIGHT_BRAKE_SET)")
-                        print("Release Brake")
+                        #print("Release Brake")
                     vr.set("3400 (>K:THROTTLE_SET)")
-                    print("Thrust")
+                    gslimit_label["fg"] = "#5fb878"
+                    #print("Thrust")
                 if gs >= kts - 1 and throttle != 0:
                     if brake != 0:
                         vr.set("-16383 (>K:AXIS_LEFT_BRAKE_SET)")
                         vr.set("-16383 (>K:AXIS_RIGHT_BRAKE_SET)")
-                        print("Release Brake")
+                        #print("Release Brake")
                     vr.set("0 (>K:THROTTLE_SET)")
-                    print("Idle")
+                    gslimit_label["fg"] = "#f2f2f2"
+                    #print("Idle")
                 if gs >= kts and brake != 9:
                     vr.set("-14383 (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set("-14383 (>K:AXIS_RIGHT_BRAKE_SET)")
-                    print("Brake")
+                    gslimit_label["fg"] = "#ed5555"
+                    #print("Brake")
                 if gs >= kts + 2 and brake != 17:
                     vr.set("-12383 (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set("-12383 (>K:AXIS_RIGHT_BRAKE_SET)")
-                    print("Force Brake")
+                    gslimit_label["fg"] = "#ed5555"
+                    #print("Force Brake")
                 if brake >= braketrigger:
-                    print("Limiter forced to disable")
+                    #print("Limiter forced to disable")
                     active = False
                     activate_button["bg"] = "#ed5555"
                     deactivate = True
                     vr.set("0 (>K:THROTTLE_SET)")
-                    print("Idle")
+                    #print("Idle")
                     vr.set("-16383 (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set("-16383 (>K:AXIS_RIGHT_BRAKE_SET)")
-                    print("Release Brake")
+                    gslimit_label["fg"] = "#f2f2f2"
+                    #print("Release Brake")
                     vr.clear_sim_variables()
                 datarefresh = time.time() + refreshrate
     else:
         active = False
         activate_button["bg"] = "#ed5555"
+        gslimit_label["fg"] = "#f2f2f2"
                 
 
 def on_closing():
@@ -192,17 +205,17 @@ def on_closing():
     deactivate = True
     try:
         vr.set("0 (>K:THROTTLE_SET)")
-        print("Idle")
+        #print("Idle")
         vr.set("-16383 (>K:AXIS_LEFT_BRAKE_SET)")
         vr.set("-16383 (>K:AXIS_RIGHT_BRAKE_SET)")
-        print("Release Brake")
+        #print("Release Brake")
         vr.clear_sim_variables()
     except:
-        print("Something failed On Exit!")
+        #print("Something failed On Exit!")
         pass
     root.destroy()
-    print("Clean exit")
-    sys.exit()
+    #print("Clean exit")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
