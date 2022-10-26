@@ -29,7 +29,7 @@ class App:
         global gslimit_label
         global activate_button
         #setting title
-        root.title("SafeTaxi-MSFS2020")
+        root.title("SafeTaxy-MSFS2020")
         #setting window size
         width=275
         height=145
