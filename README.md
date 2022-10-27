@@ -1,2 +1,2 @@
-# SafeTaxy-MSFS2020
+# SafeTaxi-MSFS2020
  
