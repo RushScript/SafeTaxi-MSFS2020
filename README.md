@@ -1,7 +1,7 @@
 # SafeTaxi-MSFS2020
 SafeTaxi is a Taxi speed limiter addon for MSFS2020. 
 
-## What's the point of using this addon?
+## What is the point of using this addon?
 This addon is meant for people who own controllers with limited throttle axis ranges or for keyboard users which prevents them from accurately controlling the aircraft speed while taxiing.
 
 ## Does it work for all aircraft's?
