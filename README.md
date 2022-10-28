@@ -11,7 +11,7 @@ I haven't tested this addon with other products apart of the mentioned above, bu
 ## How do i install and run SafeTaxi-MSFS2020
 You can choose between the installer or the zipped version which can be downloaded from the repo [release](https://github.com/RushScript/SafeTaxi-MSFS2020/releases) section.
 
-Zipped version:
+[Zipped version](https://github.com/RushScript/SafeTaxi-MSFS2020/releases/download/zip/safetaxi-msfs2020.zip):
 1. Copy all content from the extracted Community folder into your MSFS2020 Community folder.
 2. The SafeTaxi can be extracted wherever you want.
 3. Run MSFS2020 and spawn your aircraft.
