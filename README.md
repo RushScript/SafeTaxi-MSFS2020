@@ -12,10 +12,10 @@ I haven't tested this addon with other products apart of the mentioned above, bu
 You can choose between the installer or the zipped version which can be downloaded from the repo [release](https://github.com/RushScript/SafeTaxi-MSFS2020/releases) section.
 
 Zipped version:
-	1. Copy all content from the extracted Community folder into your MSFS2020 Community folder.
-	2. The SafeTaxi can be extracted wherever you want.
-	3. Run MSFS2020 and spawn your aircraft.
-	4. Launch the app by running "safetaxy.exe"
+1. Copy all content from the extracted Community folder into your MSFS2020 Community folder.
+2. The SafeTaxi can be extracted wherever you want.
+3. Run MSFS2020 and spawn your aircraft.
+4. Launch the app by running "safetaxy.exe"
 
 ## Issues
 Please submint any [issues](https://github.com/RushScript/SafeTaxi-MSFS2020/issues/new)
