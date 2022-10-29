@@ -1,11 +1,15 @@
 import tkinter as tk
 import tkinter.font as tkFont
-import sys
+import win32api, win32con
+import sys, os
 import threading
 import time
 from simconnect_mobiflight import SimConnectMobiFlight
 from mobiflight_variable_requests import MobiFlightVariableRequests
+from glob import glob
 
+
+version = "1.0.1"
 
 kts = 5
 ktsmin = 5
@@ -15,13 +19,58 @@ deactivate = False
 braketrigger = 30
 alwaysontop = True
 transparency = 0.9
-refreshrate = 0.100
+refreshrate = 0.100     
 
 
-datarefresh= time.time()
-sm = SimConnectMobiFlight()
-vr = MobiFlightVariableRequests(sm)
-vr.clear_sim_variables()
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
+def locatemsfs():
+    msfsfolder = None
+    if os.path.isdir(os.path.expanduser('~')+"\\AppData\\Roaming\\Microsoft Flight Simulator"):
+        msfsfolder = os.path.expanduser('~')+"\\AppData\\Roaming\\Microsoft Flight Simulator\\"
+    elif os.path.isdir(os.path.expanduser('~')+"\\AppData\\Local\\MSFSPackages"):
+        msfolder = os.path.expanduser('~')+"\\AppData\\Local\\MSFSPackages\\"
+    else:
+        for directories in glob(os.path.expanduser('~')+"\\AppData\\Local\\Packages\\*\\", recursive = False):
+            if "Microsoft.FlightSimulator" in directories:
+                msfsfolder = directories
+                break
+    return msfsfolder
+
+
+def msfsautorun(path):
+    xml = open(path+"exe.xml", "r")
+    execfg = xml.read()
+    xml.close()
+    if "<Name>SafeTaxi-MSFS2020</Name>" not in execfg:
+        fileimport = open(resource_path("exe.import"), "r")
+        exeimport = fileimport.read()
+        fileimport.close()
+        xml = open(path+"exe.xml", "w")
+        xml.write(execfg.replace("</SimBase.Document>", "")+exeimport.replace("<Path>safetaxi.exe</Path>", "<Path>"+resource_path("safetaxi.exe")+"</Path>"))
+        xml.close()
+
+
+def firstruncheck(path):
+    check = False
+    try:
+        data = open(path+"safetaxi.opt", "r")
+        opt = data.readlines()
+    except:
+        if win32api.MessageBox(0, "Do you want SafeTaxi to run automatically when MSFS starts?", "SafeTaxi "+version, win32con.MB_YESNO | win32con.MB_ICONQUESTION) == 6:
+            with open(path+"safetaxi.opt", "x") as data:
+                data.write(version)
+                check = True
+    return check
 
 
 class App:
@@ -29,7 +78,7 @@ class App:
         global gslimit_label
         global activate_button
         #setting title
-        root.title("SafeTaxi-MSFS2020")
+        root.title("SafeTaxi "+version)
         #setting window size
         width=275
         height=145
@@ -38,7 +87,7 @@ class App:
         alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
         root.geometry(alignstr)
         root.resizable(width=False, height=False)
-        root.iconbitmap("app.ico")
+        root.iconbitmap(resource_path("app.ico"))
         # Hide the root window drag bar and close button
         root.overrideredirect(False)
         # Make the root window always on top
@@ -83,7 +132,7 @@ class App:
         ft = tkFont.Font(family='Arial',size=16)
         activate_button["font"] = ft
         activate_button["fg"] = "#000000"
-        activate_button["bg"] = "grey"
+        activate_button["bg"] = "#ed5555"
         activate_button["justify"] = "center"
         activate_button["text"] = "Activate"
         activate_button.place(x=160,y=40,width=92,height=60)
@@ -135,13 +184,23 @@ class App:
         #print(active)
 
 
+def wasmconnect():
+    global datarefresh
+    global sm
+    global vr
+    datarefresh= time.time()
+    sm = SimConnectMobiFlight()
+    vr = MobiFlightVariableRequests(sm)
+    vr.clear_sim_variables()
+
+
 def limit():
     global datarefresh
     global active
     global activate_button
     global gslimit_label
     global deactivate
-    if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1:
+    if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1 and int(vr.get("(A:GENERAL ENG RPM:1, rpm)")) >= 100 and vr:
         while deactivate == False:
             if time.time() >= datarefresh:
                 brake = int(vr.get("(A:BRAKE LEFT POSITION, percent)"))
@@ -194,11 +253,15 @@ def limit():
                     #print("Release Brake")
                     vr.clear_sim_variables()
                 datarefresh = time.time() + refreshrate
+                if int(vr.get("(A:SIM ON GROUND, Bool)")) == 0:
+                    deactivate = True
+
+                                        
     else:
         active = False
         activate_button["bg"] = "#ed5555"
         gslimit_label["fg"] = "#f2f2f2"
-                
+                       
 
 def on_closing():
     global deactivate
@@ -219,7 +282,16 @@ def on_closing():
 
 
 if __name__ == "__main__":
+    msfsfolder = locatemsfs()
+    if firstruncheck(msfsfolder):
+        msfsautorun(msfsfolder) 
+    datarefresh= time.time()
+    sm = SimConnectMobiFlight()
+    vr = MobiFlightVariableRequests(sm)
+    vr.clear_sim_variables()
     root = tk.Tk()
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", on_closing)
+##    twasmconnect = threading.Thread(target=wasmconnect)
+##    twasmconnect.start()
     root.mainloop()

@@ -1,0 +1,6 @@
+	<Launch.Addon>
+		<Name>SafeTaxi-MSFS2020</Name>
+		<Disabled>False</Disabled>
+		<Path>safetaxi.exe</Path>
+	</Launch.Addon>
+</SimBase.Document>
