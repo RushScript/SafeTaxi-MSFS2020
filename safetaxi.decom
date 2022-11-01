@@ -17,16 +17,16 @@ ktsmin = 5
 ktsmax = 35
 active = False
 deactivate = False
-braketrigger = 80
+braketrigger = 40
 alwaysontop = True
 transparency = 0.9
 refreshrate = 0.100
-debug = True
+debug = False
 
 brkrelease = -16383
-brkset = -14383
-thtset = 20
-ththold = "CUT"
+brksoft = -14383
+brkforce = -12383
+thttforce = 20
 
 
 def resource_path(relative_path):
@@ -179,7 +179,7 @@ class App:
         profile_combobox["takefocus"] = "False"
         profile_combobox["font"] = ft
         profile_combobox["justify"] = "left"
-        profile_combobox.place(x=15,y=110,width=140,height=20)
+        profile_combobox.place(x=15,y=110,width=135,height=20)
         #print(profile.get())
 
 ##        bar_canvas = tk.Canvas(root)
@@ -261,7 +261,6 @@ def wasmconnect():
 
 def limit():
     global datarefresh
-    global debug
     global active
     global activate_button
     global profile_combobox
@@ -269,18 +268,17 @@ def limit():
     global top_label
     global deactivate
     global brkrelease
-    global brkset
-    global thtset
-    global ththold
+    global brksoft
+    global brkforce
+    global thttforce
     profile = profile_combobox.get()
     if profile != "Default Profile":      
         config.read(resource_path("profiles\\"+profile+'.ini'))
-        brkrelease = float(config['PROFILE']['brake_release'])
-        brkset = float(config['PROFILE']['brake_set'])
-        thtset = int(config['PROFILE']['thrust_set'])
-        ththold = str(config['PROFILE']['thrust_hold'])
+        brkrelease = config['PROFILE']['brake_release']
+        brksoft = config['PROFILE']['brake_soft']
+        brkforce = config['PROFILE']['brake_force']
+        thttforce = config['PROFILE']['force_thrust']
         debug = bool(config['CONFIG']['enable_debug'])
-    brkhold = brkset
     if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1 and int(vr.get("(A:GENERAL ENG RPM:1, rpm)")) >= 100 and vr:
         while deactivate == False:
             if time.time() >= datarefresh:
@@ -291,34 +289,26 @@ def limit():
                     vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     #print("Release Brake")
-                    vr.set("(>K:THROTTLE_"+str(thtset)+")")
+                    vr.set("(>K:THROTTLE_"+str(thttforce)+")")
                     gslimit_label["fg"] = "#5fb878"
                     #print("Force Thrust")
-                elif gs in range(kts - 4, kts - 1):
+                elif gs in range(kts - 4, kts):
                     vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     #print("Release Brake")
-                    vr.set("(>K:THROTTLE_"+ththold+")")
+                    vr.set("(>K:THROTTLE_CUT)")
                     gslimit_label["fg"] = "#f2f2f2"
                     #print("Idle")
-                elif gs < kts:
-                    brkset = brkset-50
-                    vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
-                    vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
-                    gslimit_label["fg"] = "#ed5555"
-                    #print("Brake DEC")
-                elif gs == kts:
-                    brkset = brkhold
-                    vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
-                    vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                elif gs in range(kts, kts + 1):
+                    vr.set(str(brksoft)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brksoft)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#ed5555"
                     #print("Brake")
                 elif gs > kts:
-                    brkset = brkset+50
-                    vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
-                    vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set(str(brkforce)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkforce)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#ed5555"
-                    #print("Brake INC")
+                    #print("Force Brake")
                 if brake >= braketrigger:
                     #print("Limiter forced to disable")
                     active = False
