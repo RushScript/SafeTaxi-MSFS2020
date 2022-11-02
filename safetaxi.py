@@ -1,34 +1,11 @@
+import sys, os, shutil, win32api, win32con, urllib.request, webbrowser, threading, time, configparser
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font as tkFont
-import win32api, win32con
-import sys, os, shutil
-import urllib.request
-import webbrowser
-import threading
-import time
 from simconnect_mobiflight import SimConnectMobiFlight
 from mobiflight_variable_requests import MobiFlightVariableRequests
 from glob import glob
-import configparser
 
-version = "1.0.2"
-
-kts = 5
-ktsmin = 5
-ktsmax = 35
-active = False
-deactivate = False
-braketrigger = 80
-alwaysontop = True
-transparency = 0.9
-refreshrate = 0.100
-debug = True
-
-brkrelease = -16383
-brkset = -14383
-thtset = 20
-ththold = "CUT"
 
 
 def resource_path(relative_path):
@@ -40,6 +17,60 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
+
+
+
+version = "1.0.2"
+urlrelease = "https://flightsim.to/file/42867/safetaxi-msfs2020"
+
+kts = 5
+refreshrate = 0.100
+active = False
+deactivate = False
+
+brkrelease = -16383
+brkset = -14383
+thtset = 20
+ththold = "CUT"
+braketrigger = 40
+
+
+
+try:
+    config = configparser.ConfigParser()
+    config.read(resource_path("safetaxi.ini"))
+    try:
+        ktsmin = int(config['CONFIG']['kts_min'])
+    except:
+        ktsmin = 5
+    try:
+        ktsmax = int(config['CONFIG']['kts_max'])
+    except:
+        ktsmax = 35
+    try:
+        alwaysontop = bool(config['CONFIG']['ui_always_on_top'])
+    except:
+        alwaysontop = True
+    try:
+        transparency = float(config['CONFIG']['ui_alpha'])
+    except:
+        transparency = 0.9
+    try:
+        forceautorun = bool(config['CONFIG']['autorun_with_msfs'])
+    except:
+        forceautorun = False
+    try:
+        debug = bool(config['CONFIG']['enable_debug'])
+    except:
+        debug = False
+except:
+    ktsmin = 5
+    ktsmax = 35
+    alwaysontop = True
+    transparency = 0.9
+    forceautorun = False
+    debug = False
+
 
 
 def locatemsfs():
@@ -87,7 +118,7 @@ def firstruncheck(path):
         data = open(path+"safetaxi.opt", "r")
         opt = data.readlines()
         data.close()
-        print(opt[0])
+        #print(opt[0])
     except:
         with open(path+"safetaxi.opt", "x") as data:
             if win32api.MessageBox(0, "Do you want SafeTaxi to run automatically when MSFS starts?", "SafeTaxi "+version, win32con.MB_YESNO | win32con.MB_ICONQUESTION) == 6:
@@ -106,12 +137,13 @@ def firstruncheck(path):
     try:
         chkversion = int(version.replace(".", ""))+1
         if urllib.request.urlopen("https://github.com/RushScript/SafeTaxi-MSFS2020/releases/tag/v"+str(chkversion)).getcode() == 200:
-            print("request ok")
+            #print("request ok")
             if win32api.MessageBox(0, "A new version of Safe Taxi is now available. Do you want to download the update files?", "SafeTaxi "+version, win32con.MB_YESNO | win32con.MB_ICONQUESTION) == 6:
-                webbrowser.open('https://flightsim.to/file/42867/safetaxi-msfs2020')
+                webbrowser.open(urlrelease)
     except:
         pass
-    print(chkversion)
+    if forceautorun:
+        check = True
     return check
 
 
@@ -120,7 +152,7 @@ def listprofiles():
     for file in os.listdir(resource_path("profiles")):
         if file.endswith(".ini"):
             plist.append(file.replace(".ini", ""))
-            #print(os.path.join(resource_path("profiles"), file))
+            ##print(os.path.join(resource_path("profiles"), file))
     return plist
 
 
@@ -204,7 +236,7 @@ class App:
         profile_combobox["font"] = ft
         profile_combobox["justify"] = "left"
         profile_combobox.place(x=15,y=110,width=140,height=20)
-        #print(profile.get())
+        ##print(profile.get())
 
 ##        bar_canvas = tk.Canvas(root)
 ##        bar_canvas.create_rectangle(0, 0, 0, 0, fill='#f9cb4e', outline='black')
@@ -232,7 +264,7 @@ class App:
         if kts > ktsmax:
             kts = ktsmax
         gslimit_label["text"] = str(kts)+" KTS"
-        #print(kts, "KTS")
+        ##print(kts, "KTS")
 
 
     def deckts_button_command(self):
@@ -242,7 +274,7 @@ class App:
         if kts < ktsmin:
             kts = ktsmin
         gslimit_label["text"] = str(kts)+" KTS"
-        #print(kts, "KTS")
+        ##print(kts, "KTS")
 
 
     def activate_button_command(self):
@@ -262,15 +294,15 @@ class App:
             active = False
             deactivate = True
             vr.set("(>K:THROTTLE_CUT)")
-            #print("Idle")
+            ##print("Idle")
             vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
             vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
-            #print("Release Brake")
+            ##print("Release Brake")
             vr.clear_sim_variables()
             activate_button["bg"] = "#ed5555"
             profile_combobox["state"] = "readonly"
             gslimit_label["fg"] = "#f2f2f2"
-        #print(active)
+        ##print(active)
 
 
 def wasmconnect():
@@ -296,13 +328,17 @@ def limit():
     global brkset
     global thtset
     global ththold
+    global braketrigger
     profile = profile_combobox.get()
     if profile != "Default Profile":      
         config.read(resource_path("profiles\\"+profile+'.ini'))
         brkrelease = float(config['PROFILE']['brake_release'])
         brkset = float(config['PROFILE']['brake_set'])
         thtset = int(config['PROFILE']['thrust_set'])
-        ththold = str(config['PROFILE']['thrust_hold'])
+        ththold = str(config['PROFILE']['deactivate_brake_trigger'])
+        if ththold == "0":
+            ththold = "CUT"
+        braketrigger = int(config['PROFILE']['thrust_set'])
         debug = bool(config['CONFIG']['enable_debug'])
     brkhold = brkset
     if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1 and int(vr.get("(A:GENERAL ENG RPM:1, rpm)")) >= 100 and vr:
@@ -314,47 +350,47 @@ def limit():
                 if gs in range(kts - kts, kts - 4):
                     vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
-                    #print("Release Brake")
+                    ##print("Release Brake")
                     vr.set("(>K:THROTTLE_"+str(thtset)+")")
                     gslimit_label["fg"] = "#5fb878"
-                    #print("Force Thrust")
+                    ##print("Force Thrust")
                 elif gs in range(kts - 4, kts - 1):
                     vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
-                    #print("Release Brake")
+                    ##print("Release Brake")
                     vr.set("(>K:THROTTLE_"+ththold+")")
                     gslimit_label["fg"] = "#f2f2f2"
-                    #print("Idle")
+                    ##print("Idle")
                 elif gs < kts:
                     brkset = brkset-50
                     vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#ed5555"
-                    #print("Brake DEC")
+                    ##print("Brake DEC")
                 elif gs == kts:
                     brkset = brkhold
                     vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#ed5555"
-                    #print("Brake")
+                    ##print("Brake")
                 elif gs > kts:
                     brkset = brkset+50
                     vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#ed5555"
-                    #print("Brake INC")
+                    ##print("Brake INC")
                 if brake >= braketrigger:
-                    #print("Limiter forced to disable")
+                    ##print("Limiter forced to disable")
                     active = False
                     activate_button["bg"] = "#ed5555"
                     profile_combobox["state"] = "readonly"
                     deactivate = True
                     vr.set("(>K:THROTTLE_CUT)")
-                    #print("Idle")
+                    ##print("Idle")
                     vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#f2f2f2"
-                    #print("Release Brake")
+                    ##print("Release Brake")
                     vr.clear_sim_variables()
                 datarefresh = time.time() + refreshrate
                 if int(vr.get("(A:SIM ON GROUND, Bool)")) == 0:
@@ -380,28 +416,27 @@ def on_closing():
     deactivate = True
     try:
         vr.set("(>K:THROTTLE_CUT)")
-        #print("Idle")
+        ##print("Idle")
         vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
         vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
-        #print("Release Brake")
+        ##print("Release Brake")
         vr.clear_sim_variables()
     except:
-        #print("Something failed On Exit!")
+        ##print("Something failed On Exit!")
         pass
     root.destroy()
-    #print("Clean exit")
+    ##print("Clean exit")
     sys.exit(0)
 
 
 if __name__ == "__main__":
-    config = configparser.ConfigParser()
     msfsfolder = locatemsfs()
-    if firstruncheck(msfsfolder):
-        msfsautorun(msfsfolder) 
+##    if firstruncheck(msfsfolder):
+##        msfsautorun(msfsfolder)
     datarefresh= time.time()
-    sm = SimConnectMobiFlight()
-    vr = MobiFlightVariableRequests(sm)
-    vr.clear_sim_variables()
+##    sm = SimConnectMobiFlight()
+##    vr = MobiFlightVariableRequests(sm)
+##    vr.clear_sim_variables()
     root = tk.Tk()
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", on_closing)
