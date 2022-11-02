@@ -23,7 +23,7 @@ def resource_path(relative_path):
 version = "1.0.2"
 urlrelease = "https://flightsim.to/file/42867/safetaxi-msfs2020"
 
-kts = 5
+kts = 10
 refreshrate = 0.100
 active = False
 deactivate = False
@@ -48,7 +48,7 @@ try:
     except:
         ktsmax = 35
     try:
-        alwaysontop = bool(config['CONFIG']['ui_always_on_top'])
+        alwaysontop = bool(int(config['CONFIG']['ui_always_on_top']))
     except:
         alwaysontop = True
     try:
@@ -56,11 +56,11 @@ try:
     except:
         transparency = 0.9
     try:
-        forceautorun = bool(config['CONFIG']['autorun_with_msfs'])
+        forceautorun = bool(int(config['CONFIG']['autorun_with_msfs']))
     except:
         forceautorun = False
     try:
-        debug = bool(config['CONFIG']['enable_debug'])
+        debug = bool(int(config['CONFIG']['enable_debug']))
     except:
         debug = False
 except:
@@ -98,12 +98,12 @@ def msfsautorun(path):
         execfg = xml.read()
         xml.close()
     except:
-        shutil.copyfile(resource_path("exe.xml"), path+"exe.xml")
+        shutil.copyfile(resource_path("data\\exe.xml"), path+"exe.xml")
         xml = open(path+"exe.xml", "r")
         execfg = xml.read()
         xml.close()
     if "<Name>SafeTaxi-MSFS2020</Name>" not in execfg:
-        fileimport = open(resource_path("exe.import"), "r")
+        fileimport = open(resource_path("data\\exe.import"), "r")
         exeimport = fileimport.read()
         fileimport.close()
         xml = open(path+"exe.xml", "w")
@@ -164,7 +164,7 @@ class App:
         global profile_combobox
         global activate_button
         #setting title
-        root.title("SafeTaxi "+version)
+        root.title("SafeTaxi-MSFS2020")
         #setting window size
         width=275
         height=145
@@ -173,7 +173,7 @@ class App:
         alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
         root.geometry(alignstr)
         root.resizable(width=False, height=False)
-        root.iconbitmap(resource_path("app.ico"))
+        root.iconbitmap(resource_path("data\\app.ico"))
         # Hide the root window drag bar and close button
         root.overrideredirect(False)
         # Make the root window always on top
@@ -181,11 +181,7 @@ class App:
         root.configure(bg='grey')
         # Turn off the window shadow
         root.attributes("-alpha", transparency)
-
-
-
-
-        
+      
         gslimit_label=tk.Label(root)
         gslimit_label["anchor"] = "center"
         ft = tkFont.Font(family='Arial',size=26)
@@ -256,7 +252,6 @@ class App:
 
         
 
-
     def inckts_button_command(self):
         global kts
         global gslimit_label
@@ -281,6 +276,7 @@ class App:
         global active
         global activate_button
         global profile_combobox
+        global top_label
         global gslimit_label
         global deactivate
         if active == False:
@@ -302,7 +298,24 @@ class App:
             activate_button["bg"] = "#ed5555"
             profile_combobox["state"] = "readonly"
             gslimit_label["fg"] = "#f2f2f2"
+            top_label["text"] = version
         ##print(active)
+
+
+    def popup(self):
+        top= tk.Toplevel(root)
+        top.resizable(width=False, height=False)
+        top.configure(bg='grey')
+        top.overrideredirect(False)
+        top.wm_attributes("-topmost", True)
+        top.geometry("247x347")
+        top.title("Child Window")
+        top.eval('tk::PlaceWindow . center')
+        self.img = tk.PhotoImage(file = resource_path("data\\img\\cfg.png"))
+        imgwiz = tk.Canvas(top)
+        imgwiz.create_image( 0,0, image =self.img , anchor = "nw")
+        #imgwiz["image"] = tk.PhotoImage(file = resource_path("data\\img\\cfg.png"))
+        imgwiz.place(x=0, y=0, width = 274, height = 347)
 
 
 def wasmconnect():
@@ -317,7 +330,6 @@ def wasmconnect():
 
 def limit():
     global datarefresh
-    global debug
     global active
     global activate_button
     global profile_combobox
@@ -329,17 +341,23 @@ def limit():
     global thtset
     global ththold
     global braketrigger
+    vr.clear_sim_variables()
     profile = profile_combobox.get()
-    if profile != "Default Profile":      
+    if profile == "Default Profile":       
+        brkrelease = -16383
+        brkset = -14383
+        thtset = 20
+        ththold = "CUT"
+        braketrigger = 40
+    else:
         config.read(resource_path("profiles\\"+profile+'.ini'))
         brkrelease = float(config['PROFILE']['brake_release'])
         brkset = float(config['PROFILE']['brake_set'])
         thtset = int(config['PROFILE']['thrust_set'])
-        ththold = str(config['PROFILE']['deactivate_brake_trigger'])
-        if ththold == "0":
+        ththold = int(config['PROFILE']['thrust_hold'])
+        braketrigger = int(config['PROFILE']['deactivate_brake_trigger'])
+        if ththold == 0:
             ththold = "CUT"
-        braketrigger = int(config['PROFILE']['thrust_set'])
-        debug = bool(config['CONFIG']['enable_debug'])
     brkhold = brkset
     if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1 and int(vr.get("(A:GENERAL ENG RPM:1, rpm)")) >= 100 and vr:
         while deactivate == False:
@@ -365,22 +383,25 @@ def limit():
                     brkset = brkset-50
                     vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
                     gslimit_label["fg"] = "#ed5555"
                     ##print("Brake DEC")
                 elif gs == kts:
                     brkset = brkhold
                     vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
                     gslimit_label["fg"] = "#ed5555"
                     ##print("Brake")
                 elif gs > kts:
                     brkset = brkset+50
                     vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
                     gslimit_label["fg"] = "#ed5555"
                     ##print("Brake INC")
                 if brake >= braketrigger:
-                    ##print("Limiter forced to disable")
+                    print("Limiter forced to disable")
                     active = False
                     activate_button["bg"] = "#ed5555"
                     profile_combobox["state"] = "readonly"
@@ -390,6 +411,7 @@ def limit():
                     vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
                     vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
                     gslimit_label["fg"] = "#f2f2f2"
+                    top_label["text"] = version
                     ##print("Release Brake")
                     vr.clear_sim_variables()
                 datarefresh = time.time() + refreshrate
@@ -398,17 +420,21 @@ def limit():
                     activate_button["bg"] = "#ed5555"
                     profile_combobox["state"] = "readonly"
                     gslimit_label["fg"] = "#f2f2f2"
+                    top_label["text"] = version
                     vr.clear_sim_variables()
                 if debug:
-                    top_label["text"] = 'KTS: '+str(gs), "THT: "+str(throttle)+"%", "BRK: "+str(brake)+"%"
-
-                                        
+                    top_label["text"] = "KTS: "+str(gs), "THT: "+str(throttle)+"%", "BRK: "+str(brake)+"%"
+                else:
+                    top_label["text"] = "GS: "+str(gs)+" KTS"
+        top_label["text"] = version
+        vr.clear_sim_variables()                                       
     else:
         active = False
         activate_button["bg"] = "#ed5555"
         profile_combobox["state"] = "readonly"
         gslimit_label["fg"] = "#f2f2f2"
         top_label["text"] = version
+        vr.clear_sim_variables()
                        
 
 def on_closing():
@@ -431,15 +457,16 @@ def on_closing():
 
 if __name__ == "__main__":
     msfsfolder = locatemsfs()
-##    if firstruncheck(msfsfolder):
-##        msfsautorun(msfsfolder)
+    if firstruncheck(msfsfolder):
+        msfsautorun(msfsfolder)
     datarefresh= time.time()
-##    sm = SimConnectMobiFlight()
-##    vr = MobiFlightVariableRequests(sm)
-##    vr.clear_sim_variables()
+    sm = SimConnectMobiFlight()
+    vr = MobiFlightVariableRequests(sm)
+    vr.clear_sim_variables()
     root = tk.Tk()
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", on_closing)
 ##    twasmconnect = threading.Thread(target=wasmconnect)
 ##    twasmconnect.start()
+##    app.popup()
     root.mainloop()
