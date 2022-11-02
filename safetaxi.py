@@ -3,6 +3,8 @@ from tkinter import ttk
 import tkinter.font as tkFont
 import win32api, win32con
 import sys, os, shutil
+import urllib.request
+import webbrowser
 import threading
 import time
 from simconnect_mobiflight import SimConnectMobiFlight
@@ -80,14 +82,36 @@ def msfsautorun(path):
 
 def firstruncheck(path):
     check = False
+    opt = None
     try:
         data = open(path+"safetaxi.opt", "r")
         opt = data.readlines()
+        data.close()
+        print(opt[0])
     except:
-        if win32api.MessageBox(0, "Do you want SafeTaxi to run automatically when MSFS starts?", "SafeTaxi "+version, win32con.MB_YESNO | win32con.MB_ICONQUESTION) == 6:
-            with open(path+"safetaxi.opt", "x") as data:
+        with open(path+"safetaxi.opt", "x") as data:
+            if win32api.MessageBox(0, "Do you want SafeTaxi to run automatically when MSFS starts?", "SafeTaxi "+version, win32con.MB_YESNO | win32con.MB_ICONQUESTION) == 6:
                 data.write(version)
                 check = True
+            else:
+                data.write(version)
+        data.close()
+    try:
+        if opt[0] != version:
+            with open(path+"safetaxi.opt", "w") as data:
+                data.write(version)
+                data.close()
+    except:
+        pass
+    try:
+        chkversion = int(version.replace(".", ""))+1
+        if urllib.request.urlopen("https://github.com/RushScript/SafeTaxi-MSFS2020/releases/tag/v"+str(chkversion)).getcode() == 200:
+            print("request ok")
+            if win32api.MessageBox(0, "A new version of Safe Taxi is now available. Do you want to download the update files?", "SafeTaxi "+version, win32con.MB_YESNO | win32con.MB_ICONQUESTION) == 6:
+                webbrowser.open('https://flightsim.to/file/42867/safetaxi-msfs2020')
+    except:
+        pass
+    print(chkversion)
     return check
 
 
