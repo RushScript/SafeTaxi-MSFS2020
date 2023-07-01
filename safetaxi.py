@@ -37,7 +37,7 @@ braketrigger = 40
 
 
 try:
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
     config.read(resource_path("safetaxi.ini"))
     try:
         ktsmin = int(config['CONFIG']['kts_min'])
@@ -60,6 +60,10 @@ try:
     except:
         forceautorun = False
     try:
+        activeprofile = int(config['CONFIG']['active_profile'])
+    except:
+        activeprofile = 0
+    try:
         debug = bool(int(config['CONFIG']['enable_debug']))
     except:
         debug = False
@@ -69,6 +73,7 @@ except:
     alwaysontop = True
     transparency = 0.9
     forceautorun = False
+    activeprofile = 0
     debug = False
 
 
@@ -163,11 +168,12 @@ class App:
         global top_label
         global profile_combobox
         global activate_button
+        global experimental_checkbox
         #setting title
         root.title("SafeTaxi-MSFS2020")
         #setting window size
         width=275
-        height=145
+        height=170
         screenwidth = root.winfo_screenwidth()
         screenheight = root.winfo_screenheight()
         alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
@@ -226,7 +232,7 @@ class App:
         profile_combobox=ttk.Combobox(root)
         ft = tkFont.Font(family='Arial',size=10)
         profile_combobox["values"] = listprofiles()
-        profile_combobox.current([0])
+        profile_combobox.current([activeprofile])
         profile_combobox["state"] = "readonly"
         profile_combobox["takefocus"] = "False"
         profile_combobox["font"] = ft
@@ -240,6 +246,8 @@ class App:
 ##        bar_canvas["highlightthickness"] = 0
 ##        bar_canvas.place(x=0, y=0, width=275,height=25)
 
+
+
         top_label=tk.Label(root)
         top_label["anchor"] = "w"
         ft = tkFont.Font(family='Arial',size=10)
@@ -249,7 +257,12 @@ class App:
         top_label["justify"] = "left"
         top_label["text"] = version
         top_label.place(x=0,y=0,width=275,height=25)
-
+        
+        experimental_checkbox = ttk.Checkbutton(root)
+        experimental_checkbox["text"] = "Experimental Brake Assist (Available soon...)"
+        experimental_checkbox.state(['!alternate'])
+        experimental_checkbox['state'] = 'disabled'
+        experimental_checkbox.place(x=0,y=145, width=275,height=25)
         
 
     def inckts_button_command(self):
@@ -437,8 +450,118 @@ def limit():
         vr.clear_sim_variables()
                        
 
+def limitAssist():
+    global datarefresh
+    global active
+    global activate_button
+    global profile_combobox
+    global gslimit_label
+    global top_label
+    global deactivate
+    global brkrelease
+    global brkset
+    global thtset
+    global ththold
+    global braketrigger
+    vr.clear_sim_variables()
+    profile = profile_combobox.get()
+    if profile == "Default Profile":       
+        brkrelease = -16383
+        brkset = -14383
+        thtset = 20
+        ththold = "CUT"
+        braketrigger = 40
+    else:
+        config.read(resource_path("profiles\\"+profile+'.ini'))
+        brkrelease = float(config['PROFILE']['brake_release'])
+        brkset = float(config['PROFILE']['brake_set'])
+        thtset = int(config['PROFILE']['thrust_set'])
+        ththold = int(config['PROFILE']['thrust_hold'])
+        braketrigger = int(config['PROFILE']['deactivate_brake_trigger'])
+        if ththold == 0:
+            ththold = "CUT"
+    brkhold = brkset
+    if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1 and int(vr.get("(A:GENERAL ENG RPM:1, rpm)")) >= 100 and vr:
+        while deactivate == False:
+            if time.time() >= datarefresh:
+                brake = int(vr.get("(A:BRAKE LEFT POSITION, percent)"))
+                gs = int(vr.get("(A:GPS GROUND SPEED, knots)"))
+                throttle = int(vr.get("(A:GENERAL ENG THROTTLE LEVER POSITION:1, percent)"))
+                if gs in range(kts - kts, kts - 4):
+                    vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    ##print("Release Brake")
+                    vr.set("(>K:THROTTLE_"+str(thtset)+")")
+                    gslimit_label["fg"] = "#5fb878"
+                    ##print("Force Thrust")
+                elif gs in range(kts - 4, kts - 1):
+                    vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    ##print("Release Brake")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
+                    gslimit_label["fg"] = "#f2f2f2"
+                    ##print("Idle")
+                elif gs < kts:
+                    brkset = brkset-50
+                    vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
+                    gslimit_label["fg"] = "#ed5555"
+                    ##print("Brake DEC")
+                elif gs == kts:
+                    brkset = brkhold
+                    vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
+                    gslimit_label["fg"] = "#ed5555"
+                    ##print("Brake")
+                elif gs > kts:
+                    brkset = brkset+50
+                    vr.set(str(brkset)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkset)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    vr.set("(>K:THROTTLE_"+ththold+")")
+                    gslimit_label["fg"] = "#ed5555"
+                    ##print("Brake INC")
+                if brake >= braketrigger:
+                    print("Limiter forced to disable")
+                    active = False
+                    activate_button["bg"] = "#ed5555"
+                    profile_combobox["state"] = "readonly"
+                    deactivate = True
+                    vr.set("(>K:THROTTLE_CUT)")
+                    ##print("Idle")
+                    vr.set(str(brkrelease)+" (>K:AXIS_LEFT_BRAKE_SET)")
+                    vr.set(str(brkrelease)+" (>K:AXIS_RIGHT_BRAKE_SET)")
+                    gslimit_label["fg"] = "#f2f2f2"
+                    top_label["text"] = version
+                    ##print("Release Brake")
+                    vr.clear_sim_variables()
+                datarefresh = time.time() + refreshrate
+                if int(vr.get("(A:SIM ON GROUND, Bool)")) == 0:
+                    deactivate = True
+                    activate_button["bg"] = "#ed5555"
+                    profile_combobox["state"] = "readonly"
+                    gslimit_label["fg"] = "#f2f2f2"
+                    top_label["text"] = version
+                    vr.clear_sim_variables()
+                if debug:
+                    top_label["text"] = "KTS: "+str(gs), "THT: "+str(throttle)+"%", "BRK: "+str(brake)+"%"
+                else:
+                    top_label["text"] = "GS: "+str(gs)+" KTS"
+        top_label["text"] = version
+        vr.clear_sim_variables()                                       
+    else:
+        active = False
+        activate_button["bg"] = "#ed5555"
+        profile_combobox["state"] = "readonly"
+        gslimit_label["fg"] = "#f2f2f2"
+        top_label["text"] = version
+        vr.clear_sim_variables()
+
+
 def on_closing():
     global deactivate
+    print(experimental_checkbox.state())
     deactivate = True
     try:
         vr.set("(>K:THROTTLE_CUT)")
@@ -450,19 +573,22 @@ def on_closing():
     except:
         ##print("Something failed On Exit!")
         pass
+    config.set('CONFIG', 'active_profile', str(profile_combobox.current()))
+    with open(resource_path("safetaxi.ini"), 'w') as configfile:
+        config.write(configfile)
     root.destroy()
     ##print("Clean exit")
     sys.exit(0)
 
 
 if __name__ == "__main__":
-    msfsfolder = locatemsfs()
-    if firstruncheck(msfsfolder):
-        msfsautorun(msfsfolder)
-    datarefresh= time.time()
-    sm = SimConnectMobiFlight()
-    vr = MobiFlightVariableRequests(sm)
-    vr.clear_sim_variables()
+##    msfsfolder = locatemsfs()
+##    if firstruncheck(msfsfolder):
+##        msfsautorun(msfsfolder)
+##    datarefresh= time.time()
+##    sm = SimConnectMobiFlight()
+##    vr = MobiFlightVariableRequests(sm)
+##    vr.clear_sim_variables()
     root = tk.Tk()
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", on_closing)
