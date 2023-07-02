@@ -37,7 +37,7 @@ braketrigger = 40
 
 
 try:
-    config = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+    config = configparser.ConfigParser()
     config.read(resource_path("safetaxi.ini"))
     try:
         ktsmin = int(config['CONFIG']['kts_min'])
@@ -371,6 +371,8 @@ def limit():
         braketrigger = int(config['PROFILE']['deactivate_brake_trigger'])
         if ththold == 0:
             ththold = "CUT"
+        ththold = str(ththold)
+            
     brkhold = brkset
     if int(vr.get("(A:SIM ON GROUND, Bool)")) == 1 and int(vr.get("(A:GENERAL ENG RPM:1, rpm)")) >= 100 and vr:
         while deactivate == False:
@@ -573,6 +575,8 @@ def on_closing():
     except:
         ##print("Something failed On Exit!")
         pass
+    config = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+    config.read(resource_path("safetaxi.ini"))
     config.set('CONFIG', 'active_profile', str(profile_combobox.current()))
     with open(resource_path("safetaxi.ini"), 'w') as configfile:
         config.write(configfile)
@@ -582,17 +586,17 @@ def on_closing():
 
 
 if __name__ == "__main__":
-##    msfsfolder = locatemsfs()
-##    if firstruncheck(msfsfolder):
-##        msfsautorun(msfsfolder)
-##    datarefresh= time.time()
-##    sm = SimConnectMobiFlight()
-##    vr = MobiFlightVariableRequests(sm)
-##    vr.clear_sim_variables()
+    msfsfolder = locatemsfs()
+    if firstruncheck(msfsfolder):
+        msfsautorun(msfsfolder)
+    datarefresh= time.time()
+    sm = SimConnectMobiFlight()
+    vr = MobiFlightVariableRequests(sm)
+    vr.clear_sim_variables()
     root = tk.Tk()
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", on_closing)
-##    twasmconnect = threading.Thread(target=wasmconnect)
-##    twasmconnect.start()
-##    app.popup()
+    twasmconnect = threading.Thread(target=wasmconnect)
+    twasmconnect.start()
+    #app.popup()
     root.mainloop()
